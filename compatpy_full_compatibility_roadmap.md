@@ -234,10 +234,10 @@ automatically.
   - [x] Test accepted aliases and omitted/explicit serial behavior.
   - [x] Test numeric serial ordering and malformed suffix rejection.
   - [x] Test ordering against dev, final, and post releases.
-- [ ] Support epochs, such as `1!2.0`.
-  - [ ] Parse epoch serials and reject malformed or repeated separators.
-  - [ ] Compare epochs before release segments for every supported operator.
-  - [ ] Test omitted epoch equivalence to epoch zero and distinct nonzero epochs.
+- [x] Support epochs, such as `1!2.0`.
+  - [x] Parse epoch serials and reject malformed or repeated separators.
+  - [x] Compare epochs before release segments for every supported operator.
+  - [x] Test omitted epoch equivalence to epoch zero and distinct nonzero epochs.
 - [ ] Support local versions, such as `1.0+vendor.1`.
   - [ ] Parse local segments and normalize their case and separators.
   - [ ] Compare numeric and lexical local segments using PEP 440 ordering.

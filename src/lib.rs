@@ -1219,6 +1219,137 @@ dependencies = [
         assert!(!package_version_satisfies("1.0+local", "!=1.0"));
     }
 
+    // Verify epoch support: omitted epoch equals epoch zero and epochs compare before release.
+    #[test]
+    fn supports_epochs() {
+        assert!(package_version_satisfies("1.0", "==0!1.0"));
+        assert!(package_version_satisfies("0!1.0", "==1.0"));
+        assert!(package_version_satisfies("1!1.0", ">2.0"));
+        assert!(package_version_satisfies("1!1.0", ">1.0"));
+        assert!(package_version_satisfies("1!1.0", ">0!1.0"));
+        assert!(!package_version_satisfies("0!1.0", ">1.0"));
+        assert!(package_version_satisfies("2!1.0", ">1!1.0"));
+    }
+
+    // Verify every supported operator compares the epoch before the release segment.
+    #[test]
+    fn epochs_compare_before_release_for_every_operator() {
+        let cases = [
+            (
+                "==1!1.0",
+                [("1!1.0", true), ("1!1.1", false), ("0!1.0", false)],
+            ),
+            (
+                "!=1!1.0",
+                [("1!1.0", false), ("0!1.0", true), ("2!1.0", true)],
+            ),
+            (
+                "<1!1.0",
+                [("0!9.9", true), ("1!0.9", true), ("1!1.0", false)],
+            ),
+            (
+                "<=1!1.0",
+                [("1!1.0", true), ("0!9.9", true), ("1!1.1", false)],
+            ),
+            (
+                ">1!1.0",
+                [("1!1.1", true), ("2!0.1", true), ("0!9.9", false)],
+            ),
+            (
+                ">=1!1.0",
+                [("1!1.0", true), ("2!0.1", true), ("0!9.9", false)],
+            ),
+            (
+                "~=1!1.4",
+                [("1!1.9", true), ("1!1.4", true), ("1!2.0", false)],
+            ),
+            (
+                "==1!1.*",
+                [("1!1.5", true), ("0!1.5", false), ("2!1.5", false)],
+            ),
+            (
+                "!=1!1.*",
+                [("1!1.5", false), ("0!1.5", true), ("2!1.5", true)],
+            ),
+        ];
+
+        for (specifier, candidates) in cases {
+            for (candidate, expected) in candidates {
+                assert_eq!(
+                    package_version_satisfies(candidate, specifier),
+                    expected,
+                    "specifier {specifier:?} with candidate {candidate:?}"
+                );
+            }
+        }
+    }
+
+    // Verify release selection orders epochs before release segments and treats
+    // an omitted epoch as epoch zero.
+    #[test]
+    fn selects_release_by_epoch_ordering() {
+        let metadata = super::PackageMetadata {
+            name: "example".to_owned(),
+            latest_version: "2.0.0".to_owned(),
+            requires_python: None,
+            releases: vec![
+                PackageRelease {
+                    version: "2.0.0".to_owned(),
+                    requires_python: None,
+                },
+                PackageRelease {
+                    version: "1!1.0".to_owned(),
+                    requires_python: None,
+                },
+                PackageRelease {
+                    version: "1.9.0".to_owned(),
+                    requires_python: None,
+                },
+            ],
+        };
+
+        let release = select_package_release(&metadata, Some(">=1.0"))
+            .unwrap()
+            .expect("a release should be selected");
+        assert_eq!(release.version, "1!1.0");
+
+        let pinned = select_package_release(&metadata, Some("==0!1.9.0"))
+            .unwrap()
+            .expect("epoch zero should match the implied epoch");
+        assert_eq!(pinned.version, "1.9.0");
+    }
+
+    // Verify malformed or repeated epoch separators are rejected with context.
+    #[test]
+    fn rejects_malformed_epochs() {
+        let malformed_specifiers = ["==1!!2.0", "==1!2!3.0", "==!1.0", "==a!1.0"];
+
+        for specifier in malformed_specifiers {
+            let error = super::package_version_satisfies("1.0", specifier)
+                .expect_err("malformed epoch should be rejected");
+            assert!(
+                error.contains(specifier),
+                "expected error to identify {specifier:?}, got {error:?}"
+            );
+        }
+
+        let metadata = super::PackageMetadata {
+            name: "example".to_owned(),
+            latest_version: "1!!2.0".to_owned(),
+            requires_python: None,
+            releases: vec![PackageRelease {
+                version: "1!!2.0".to_owned(),
+                requires_python: None,
+            }],
+        };
+        let error = select_package_release(&metadata, None)
+            .expect_err("malformed release epoch should be rejected");
+        assert!(
+            error.contains("Invalid package version '1!!2.0'"),
+            "expected error to identify malformed version, got {error:?}"
+        );
+    }
+
     // Verify version behavior for operators match nonmatch and boundary cases.
 
     #[test]
