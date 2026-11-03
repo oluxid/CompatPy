@@ -35,3 +35,29 @@ jobs:
 
       - name: Run tests
         run: cargo test --verbose
+
+  security:
+    name: Security audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install security tools
+        run: |
+          cargo install --locked cargo-audit
+          cargo install --locked cargo-deny
+
+      - name: Audit dependencies
+        run: cargo audit
+
+      - name: Check dependency policies
+        run: cargo deny check
