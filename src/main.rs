@@ -235,7 +235,7 @@ where
     }
 
     let compatible_versions = match target_environment {
-        Some((_, environment)) if has_markers => compatible_python_versions_for_environment(
+        Some((_, environment)) => compatible_python_versions_for_environment(
             &dependencies,
             &selected_releases,
             &environment,
@@ -386,6 +386,45 @@ mod tests {
         assert!(stdout.contains("\"sys_platform\":\"linux\""));
         assert!(stdout.contains("  3.9\n"));
         assert!(!stdout.contains("  3.8\n"));
+
+        fs::remove_dir_all(project).unwrap();
+    }
+
+    #[test]
+    fn marker_analysis_preserves_unmarked_dependencies_in_candidate_result() {
+        let project =
+            temp_project("example>=1\nconditional; python_version < \"3.10\"\n");
+        let target = target_environment_file(&project, full_target_json());
+        let args = vec![
+            project.display().to_string(),
+            "--target-environment".to_owned(),
+            target.display().to_string(),
+        ];
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+
+        let status = run(&args, &mut stdout, &mut stderr, |name| {
+            Ok(PackageMetadata {
+                name: name.to_owned(),
+                latest_version: "1.0.0".to_owned(),
+                requires_python: None,
+                releases: vec![PackageRelease {
+                    version: "1.0.0".to_owned(),
+                    requires_python: if name == "example" {
+                        Some(">=3.12".to_owned())
+                    } else {
+                        Some(">=3.7".to_owned())
+                    },
+                }],
+            })
+        });
+
+        let stdout = String::from_utf8(stdout).unwrap();
+        let stderr = String::from_utf8(stderr).unwrap();
+        assert_eq!(status, 0, "{stderr}");
+        assert!(stdout.contains("  3.12\n"));
+        assert!(!stdout.contains("  3.11\n"));
+        assert!(!stdout.contains("  3.9\n"));
 
         fs::remove_dir_all(project).unwrap();
     }
