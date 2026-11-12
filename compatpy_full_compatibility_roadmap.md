@@ -322,17 +322,17 @@ automatically.
   - [ ] Select candidate releases separately for each supported Python version.
   - [ ] Evaluate each dependency marker in that candidate environment before applying release metadata.
   - [x] Route CLI results through the marker-aware per-candidate helper.
-  - [ ] Add a CLI fixture where a dependency applies to only one Python candidate.
+  - [x] Add a CLI fixture where a dependency applies to only one Python candidate.
 - [/] Skip requirements whose markers evaluate false.
   - [x] Exclude false-marker dependencies in the library compatibility helper.
   - [ ] Ensure false-marker dependencies trigger no metadata request for that candidate.
   - [ ] Test that a false branch with no release does not exclude the candidate.
-  - [ ] Verify this filtering is used for normal CLI runs.
+  - [x] Verify this filtering is used for normal CLI runs.
 - [/] Include requirements whose markers evaluate true.
   - [x] Retain true-marker dependencies in the library compatibility helper.
   - [ ] Apply true-branch release metadata to the candidate result.
   - [ ] Test that changing the marker context changes the result as expected.
-  - [ ] Verify true branches constrain the normal CLI result.
+  - [x] Verify true branches constrain the normal CLI result.
 - [/] Handle markers combining Python and operating-system conditions.
   - [x] Cover combined candidate-Python/platform conditions in tests.
   - [ ] Add explicit target platform options instead of assuming the build host.
